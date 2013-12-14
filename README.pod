@@ -144,7 +144,7 @@ of hashes containing order details. Example:
 
 Cancels order with given ID number.
 
-	# cancel order 1234567 - use C<open_orers()> to find order numbers
+	# cancel order 1234567 - use open_orers() to find order numbers
 	$api->cancel_order(1234567);
 
 
@@ -167,7 +167,8 @@ the order is matched byt the other side.
 
 =head3 pair
 
-Defines where we post our trade offer - this would currently be one of GHS/BTC, NMC/BTC, GHS/NMC or BF1/BTC.
+Defines where we post our trade offer - this would currently be one of C<GHS/BTC>, C<NMC/BTC>, 
+C<GHS/NMC> or C<BF1/BTC>.
 
 =head3 type
 
@@ -180,24 +181,6 @@ Defines how many units you want to trade.
 =head3 price
 
 Defines price per unit of the commodity
-
-
-=cut
-
-=head2 instant_order(%hash)
-
-Posts market matching order to ensure the transaction goes through immediately. Example:
-
-	# change all NMC for BTC at current market rate
-	my $balance = $api->balance;
-	my $result = $api->instant_order(
-		'pair' => 'NMC/BTC', 
-		'type' => 'sell', 
-		'amount' => $balance->{NMC}->{available},
-	);
- 
-This is just a convenience feature that will do everything for you in the background, so you 
-don't have to calculate manually how much of commodity you get.
 
 
 =cut
@@ -236,7 +219,6 @@ under the terms of either: the GNU General Public License as published
 by the Free Software Foundation; or the Artistic License.
 
 See http://dev.perl.org/licenses/ for more information.
-
 
 
 =cut
