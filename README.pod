@@ -1,0 +1,243 @@
+=head1 NAME
+
+WWW::CexIo::API - Perl interface to the Cex.io Trade API
+
+
+=cut
+
+=head1 SYNOPSIS
+
+Perl interface to the Cex.io Trade API as docummented at L<https://cex.io/api>. Example:
+
+    use WWW::CexIo::API;
+    
+    my $api = WWW::CexIo::API->new(
+        ApiUser => 'cexio',
+        ApiKey => 'API key',
+        ApiSecret => 'API secret key',
+    );
+    
+    if (my $balance = $api->balance) {
+    	print "GH balance is " . $balance . "\n";
+    }
+
+=head1 Description
+
+This module provides easy access to the API published at https://cex.io/api, effectively allowing
+you to easily write trading scripts/applications for your account. The API however comes with several
+caveats - main one is the call quota currently set at 600 requests in 10 minutes (yes, that is 1 per 
+second) and nonce that has to increment with every request. No surprise that Cex's API description 
+suggests using epoch as nonce. 
+
+I looked at client libraries for other languages and all of them use straight C<time()> call to set 
+the value of nonce, meaning the user has to think about managing quota. This module does it for you, 
+enforcing 1sec delay if needed. 
+
+WARNING: if your application creates and uses more than one instance of the object, all quota management will
+be inefficient, meaning you can still be banned (by IP address) from trading at Cex.io. Use at your 
+own risk, you have been warned.
+
+=head1 GLOBAL PARAMETERS
+
+There are three required parameters that should be passed when creating the API object. These 
+are listed below.
+
+=head2 ApiUser
+
+This is the user name you use to sign-in into cex.io website, which is required for the 
+API to work correctly.
+
+=head2 ApiKey
+
+Contains the API key you created for your account. Please remember that API keys have 
+privileges assigned to them at the time of creation.
+
+=head2 ApiSecret
+
+This is the secret key you received with your API key. Once the API key is  activated, 
+the secret key is hidden and can't be retrieved again. If you lost your secret key, 
+you have to generate a new API key.
+
+If the API key and matching secret you use have no permission to request certain API call, the 
+service will still respond to the request, but instead of the actual data it will return only
+the error message like the one below (available via the response hashref)
+
+	{'error' => 'Permission denied'}
+
+therefore it's a good idea to check if the hash containing service response contains an C<error> key.
+
+=head1 AVAILABLE METHODS
+
+=head2 new(%hash)
+
+Instantiate a new API object. Example:
+
+    my $api = WWW::Namecheap::API->new(
+        ApiUser => 'cex.io username',
+        ApiKey  => 'apikey',
+        ApiSecret => 'apisecret',
+        Agent  => 'My API Agent/1.0', # optional, overrides default UA
+    );
+
+Only C<ApiUser>, C<ApiKey> and C<ApiSecret> are required, in which case Agent defaults to 
+C<WWW::CexIo::API/$VERSION>. Those are the defaults.
+
+
+=cut
+
+=head2 ticker($pair)
+
+Fetches the ticker for a given pair. If pair is not provided GHS/BTC is assumed. Example:
+
+	# GHS/BTC ticker
+	my $ticker = $api->ticker;
+	# NMC/BTC ticker
+	my $ticker = $api->ticker('NMC/BTC');
+
+
+=cut
+
+=head2 order_book()
+
+Fetch order book for a given pair. Once again this is public function that works unauthenticated. Example:
+
+	my $orders = $api->order_book('NMC/BTC');
+	my $spread = $orders->{asks}->[0][0] - $orders->{bids}->[0][0];
+	printf ("Spread is %0.8f NMC\n", $spread);	
+
+
+=cut
+
+=head2 trade_history()
+
+PLACEHOLDER - This one is not implemented yet.
+
+
+=cut
+
+=head2 balance()
+
+Get current balance for the account. Example:
+
+    if (my $balance = $api->balance()) {
+    	printf("You have %0.2f GH available and %0.2f GH in orders\n", 
+    		$balance->{GHS}->{available}, $balance->{GHS}->{orders});
+    }
+	
+
+=cut
+
+=head2 open_orders($pair)
+
+Get list of currently open orders for a pair of commodities. If pair is not provided it defaults
+to GHS/BTC. Currently available pairs are GHS/BTC, NMC/BTC, GHS/NMC and BF1/BTC. Returns array 
+of hashes containing order details. Example: 
+
+	if (my $open_orders = $api->open_orders('NMC/BTC')) {
+		### need useful example
+	}
+
+
+=cut
+
+=head2 cencel_order($order_id)
+
+Cancels order with given ID number.
+
+	# cancel order 1234567 - use C<open_orers()> to find order numbers
+	$api->cancel_order(1234567);
+
+
+=cut
+
+=head2 place_order(%hash)
+
+This function is used to place orders and requires several parameters. Example:
+
+	# buy 0.8208 GHS at 0.062 BTC/GHS
+	$api->place_order(
+		'pair' => 'GHS/BTC',
+		'type' => 'buy',
+		'amount' => 0.8208,
+		'price' => 0.062,
+		);
+
+Please remember, this will only post your offer but the transaction will be executed only when 
+the order is matched byt the other side.
+
+=head3 pair
+
+Defines where we post our trade offer - this would currently be one of GHS/BTC, NMC/BTC, GHS/NMC or BF1/BTC.
+
+=head3 type
+
+This has two possible values: C<buy> or C<sell>.
+
+=head3 amount
+
+Defines how many units you want to trade.
+
+=head3 price
+
+Defines price per unit of the commodity
+
+
+=cut
+
+=head2 instant_order(%hash)
+
+Posts market matching order to ensure the transaction goes through immediately. Example:
+
+	# change all NMC for BTC at current market rate
+	my $balance = $api->balance;
+	my $result = $api->instant_order(
+		'pair' => 'NMC/BTC', 
+		'type' => 'sell', 
+		'amount' => $balance->{NMC}->{available},
+	);
+ 
+This is just a convenience feature that will do everything for you in the background, so you 
+don't have to calculate manually how much of commodity you get.
+
+
+=cut
+
+=head2 sign()
+
+Generates signature required by the API to validate the authenticity of the request. During 
+this process a nonce is set as $self->{_nonce}, as required by most of the API calls.
+
+
+=cut
+
+=head1 AUTHOR
+
+Tomasz Miklas, C<< <miklas.tomasz at gmail.com> >>
+
+=head1 BUGS
+
+Please report any bugs or feature requests using GitHub's issue tracker at L<https://github.com/tmiklas/WWW-CexIo-API/issues>.
+
+=head1 SUPPORT
+
+You can find documentation for this module with the perldoc command.
+
+    perldoc WWW::CexIo::API
+
+=head1 ACKNOWLEDGEMENTS
+
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright 2013 Tomasz Miklas.
+
+This program is free software; you can redistribute it and/or modify it
+under the terms of either: the GNU General Public License as published
+by the Free Software Foundation; or the Artistic License.
+
+See http://dev.perl.org/licenses/ for more information.
+
+
+
+=cut
+
