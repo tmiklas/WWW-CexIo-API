@@ -140,7 +140,7 @@ of hashes containing order details. Example:
 
 =cut
 
-=head2 cencel_order($order_id)
+=head2 cancel_order($order_id)
 
 Cancels order with given ID number.
 
@@ -212,7 +212,7 @@ this process a nonce is set as $self->{_nonce}, as required by most of the API c
 
 =head1 AUTHOR
 
-Tomasz Miklas, C<< <miklas.tomasz at gmail.com> >>
+Tomasz Miklas, C<< <miklas.tomasz {at} gmail.com> >>
 
 =head1 BUGS
 
