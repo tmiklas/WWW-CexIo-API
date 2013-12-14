@@ -18,7 +18,7 @@ Perl interface to the Cex.io Trade API as docummented at L<https://cex.io/api>. 
     );
     
     if (my $balance = $api->balance) {
-    	print "GH balance is " . $balance . "\n";
+    	print "GHS balance is " . $balance . "\n";
     }
 
 =head1 Description
