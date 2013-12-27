@@ -18,7 +18,7 @@ Perl interface to the Cex.io Trade API as docummented at L<https://cex.io/api>. 
     );
     
     if (my $balance = $api->balance) {
-    	print "GHS balance is " . $balance . "\n";
+    	print "GHS balance is " . $balance->{GHS}->{available} . "\n";
     }
 
 =head1 Description
@@ -39,8 +39,7 @@ own risk, you have been warned.
 
 =head1 GLOBAL PARAMETERS
 
-There are three required parameters that should be passed when creating the API object. These 
-are listed below.
+There are three required parameters that should be passed when creating the API object.
 
 =head2 ApiUser
 
@@ -50,7 +49,7 @@ API to work correctly.
 =head2 ApiKey
 
 Contains the API key you created for your account. Please remember that API keys have 
-privileges assigned to them at the time of creation.
+privileges assigned to them  and can be limited to certain IP addresses at the time of creation.
 
 =head2 ApiSecret
 
@@ -76,7 +75,7 @@ Instantiate a new API object. Example:
         ApiUser => 'cex.io username',
         ApiKey  => 'apikey',
         ApiSecret => 'apisecret',
-        Agent  => 'My API Agent/1.0', # optional, overrides default UA
+        # Agent  => 'My API Agent/1.0', # optional, overrides default UA
     );
 
 Only C<ApiUser>, C<ApiKey> and C<ApiSecret> are required, in which case Agent defaults to 
@@ -91,17 +90,34 @@ Fetches the ticker for a given pair. If pair is not provided GHS/BTC is assumed.
 
 	# GHS/BTC ticker
 	my $ticker = $api->ticker;
+	print "Last GHS/BTC trade price was ". $ticker->{last} . "\n";
+	
 	# NMC/BTC ticker
 	my $ticker = $api->ticker('NMC/BTC');
+	
+Returned hashref example:
+
+	$VAR1 = {
+          'high' => '0.0564',
+          'bid' => '0.050386109999999998',
+          'volume' => '51616.87351347',
+          'timestamp' => '1388150228',
+          'last' => '0.05053538',
+          'low' => '0.05',
+          'ask' => '0.050399989999999999'
+        };
 
 
 =cut
 
 =head2 order_book()
 
-Fetch order book for a given pair. Once again this is public function that works unauthenticated. Example:
+Fetch order book for a given pair. Once again this is public function that works unauthenticated and returns a hashref 
+containing asks and bids in a form of array of arrays. Example:
 
 	my $orders = $api->order_book('NMC/BTC');
+	# price spread = lowest ask price - highest bid price
+	# asks and bids are arrays of arrays, hence element indexes used below
 	my $spread = $orders->{asks}->[0][0] - $orders->{bids}->[0][0];
 	printf ("Spread is %0.8f NMC\n", $spread);	
 
@@ -123,19 +139,57 @@ Get current balance for the account. Example:
     	printf("You have %0.2f GH available and %0.2f GH in orders\n", 
     		$balance->{GHS}->{available}, $balance->{GHS}->{orders});
     }
+
+Sample structure of C<$balance> hashref:
+
+	$VAR1 = {
+          'DVC' => {
+                     'available' => '10.50787175'
+                   },
+          'BTC' => {
+                     'orders' => '0.04500000',
+                     'available' => '0.00271602'
+                   },
+          'NMC' => {
+                     'orders' => '0.00000000',
+                     'available' => '0.00506661'
+                   },
+          'timestamp' => '1388150547',
+          'GHS' => {
+                     'orders' => '0.00000000',
+                     'available' => '1.00000000'
+                   },
+          'IXC' => {
+                     'available' => '0.31037918'
+                   },
+          'username' => 'tmiklas'
+        };
 	
 
 =cut
 
 =head2 open_orders($pair)
 
-Get list of currently open orders for a pair of commodities. If pair is not provided it defaults
+Get list of currently open buy/sell orders for a pair of commodities. If pair is not provided it defaults
 to GHS/BTC. Currently available pairs are GHS/BTC, NMC/BTC, GHS/NMC and BF1/BTC. Returns array 
 of hashes containing order details. Example: 
 
-	if (my $open_orders = $api->open_orders('NMC/BTC')) {
-		### need useful example
+	if (my $open_orders = $api->open_orders('GHS/BTC')) {
+		### need useful example
 	}
+
+Example structure of C<$open_odrers> hashref:
+
+	$VAR1 = [
+          {
+            'amount' => '1.00000000',
+            'time' => '1388089598475',
+            'pending' => '1.00000000',
+            'price' => '0.045',
+            'type' => 'buy',
+            'id' => '108667336'
+          }
+        ];
 
 
 =cut
@@ -154,8 +208,8 @@ Cancels order with given ID number.
 
 This function is used to place orders and requires several parameters. Example:
 
-	# buy 0.8208 GHS at 0.062 BTC/GHS
-	$api->place_order(
+	# buy 0.8208 GHS at 0.062 BTC/GHS
+	my $order = $api->place_order(
 		'pair' => 'GHS/BTC',
 		'type' => 'buy',
 		'amount' => 0.8208,
@@ -182,13 +236,24 @@ Defines how many units you want to trade.
 
 Defines price per unit of the commodity
 
+Once order is placed the C<$order> hashref has the following structure:
+
+	$VAR1 = {
+          'amount' => '0.00532212',
+          'time' => '1388153024150',
+          'price' => '0.00640383',
+          'type' => 'sell',
+          'pending' => '0.00000000',
+          'id' => '111480877'
+        };
+        
 
 =cut
 
 =head2 sign()
 
 Generates signature required by the API to validate the authenticity of the request. During 
-this process a nonce is set as $self->{_nonce}, as required by most of the API calls.
+this process a nonce is internally set as C<$self-E<gt>{_nonce}>, as required by most of the API calls.
 
 
 =cut
