@@ -359,6 +359,16 @@ sub sign {
 	return uc(hmac_sha256_hex($body,$self->{ApiSecret}));
 }
 
+sub signfast {
+	my $self = shift;
+	my $newnonce = time();
+	# fuck API limits, just sign and return so we can manage it externally
+	$self->{_nonce} = $self->{_lastnonce} = time();
+	my $body = $self->{_nonce} . $self->{ApiUser} . $self->{ApiKey};
+	return uc(hmac_sha256_hex($body,$self->{ApiSecret}));
+}
+
+
 sub _argparse {
     my $hashref;
     if (@_ % 2 == 0) {
@@ -384,7 +394,7 @@ sub _post {
 	}
 	# process all other params and add to request body
     # generate signature and send the request
-    my $signature = $self->sign();
+    my $signature = $params->{signature} || $self->sign();
     my $reqContent = "nonce=$self->{_nonce}&key=$self->{ApiKey}&signature=$signature";
 	foreach (keys %$params) {
 		$reqContent .= "&$_=$params->{$_}";
@@ -395,7 +405,6 @@ sub _post {
     $req->content($reqContent);
     my $response = $ua->request($req);
     # did it work?
-#    print STDERR "\nHTTP POST response ", $response->status_line, "\n";
     unless ($response->is_success) {
         Carp::carp("Request failed: " . $response->message);
         return;
