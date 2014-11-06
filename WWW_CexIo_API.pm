@@ -433,7 +433,12 @@ sub _get {
         return;
     }
     # return hash 
-    return decode_json($response->content);
+    my $returned;
+    eval { $returned = decode_json($response->content) };
+    if ($@) {
+      die "Error decoding JSON: ", $response->content, "\n";
+    }
+    return $returned;
 }
 
 =head1 AUTHOR
